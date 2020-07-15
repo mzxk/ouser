@@ -10,6 +10,7 @@ type User struct {
 	Referrer string             `json:"-"` //推荐人
 
 	NickName        string //用户自定义昵称
+	Avatar          string //头像ID
 	DeliveryAddress string //用户实际地址
 
 	Email string //用户email
@@ -24,4 +25,24 @@ type User struct {
 	RateLimit int64 `json:"-"` //用户接口全局限制
 
 	GoogleKey string `json:"-"` //用户的googlekey
+}
+
+//Feedback 用户反馈的结构
+type Feedback struct {
+	Bid  string
+	Text []FeedbackText
+}
+
+//FeedbackText 用户反馈的数组
+type FeedbackText struct {
+	Time  string
+	Admin bool
+	Text  string
+}
+
+//Avatar 用户头像
+type Avatar struct {
+	ID     primitive.ObjectID `bson:"_id"`
+	Bid    string             `json:"-"`
+	Avatar []byte
 }

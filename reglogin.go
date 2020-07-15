@@ -3,19 +3,28 @@ package ouser
 import (
 	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
+	"github.com/mzxk/oval"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type Ouser struct {
+	mgo        *omongo.MongoDB
+	httpClient *ohttp.Server
+}
+
+func New(mgo *omongo.MongoDB, clt *ohttp.Server) *Ouser {
+	return &Ouser{mgo, clt}
+}
+
 //Logout 用户登出
-func Logout(p map[string]string) (interface{}, error) {
+func (t *Ouser) Logout(p map[string]string) (interface{}, error) {
 	ohttp.DeleteSession(p["key"])
 	return nil, nil
 }
 
 //Login 用户登陆
-func Login(p map[string]string) (interface{}, error) {
-	//TODO limit IP
+func (t *Ouser) Login(p map[string]string) (interface{}, error) {
 	user := p["user"]
 	pwd := p["pwd"]
 
@@ -23,26 +32,32 @@ func Login(p map[string]string) (interface{}, error) {
 		return nil, errs(ErrParamsWrong)
 	}
 	var usr User
-	err := mgo.C("user").FindOne(nil, bson.M{"user": user}).Decode(&usr)
+	err := t.mgo.C("user").FindOne(nil, bson.M{"user": user}).Decode(&usr)
 	if err != nil {
 		return nil, errs(ErrUserLogin)
 	}
 	if sha(pwd) != usr.Pwd {
+		if oval.Limited(user+"login", 60, 5) {
+			return nil, errs(ErrLimit)
+		}
 		return nil, errs(ErrUserLogin)
 	}
-	return getLogin(usr.ID)
+	oval.UnLimited(user + "login")
+	return getLoginToken(usr.ID)
 }
 
 //RegisterSimple 用户注册
-func RegisterSimple(p map[string]string) (interface{}, error) {
-	//TODO limit IP
+func (t *Ouser) RegisterSimple(p map[string]string) (interface{}, error) {
+	if oval.Limited(p["ip"]+"reg", 60, 5) {
+		return nil, errs(ErrLimit)
+	}
 	user := p["user"]
 	pwd := p["pwd"]
 
 	if user == "" || pwd == "" {
 		return nil, errs(ErrParamsWrong)
 	}
-	c := mgo.C("user")
+	c := t.mgo.C("user")
 	usr := User{
 		ID:       omongo.ID(""),
 		User:     user,
@@ -58,11 +73,11 @@ func RegisterSimple(p map[string]string) (interface{}, error) {
 		return nil, errs(ErrUserExisted)
 	}
 
-	return getLogin(usr.ID)
+	return getLoginToken(usr.ID)
 }
 
 //通过通过用户id获取token
-func getLogin(id primitive.ObjectID) (struLogin, error) {
+func getLoginToken(id primitive.ObjectID) (struLogin, error) {
 	k, v, err := ohttp.AddSession(id.Hex())
 	return struLogin{k, v}, err
 }
