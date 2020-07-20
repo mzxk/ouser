@@ -7,36 +7,32 @@ import (
 	"github.com/mzxk/ouser"
 
 	"github.com/mzxk/ohttp"
-	"github.com/mzxk/omongo"
 )
 
-var mgo *omongo.MongoDB
-
 func main() {
-	//mgo = omongo.NewMongoDB("mongodb://192.168.1.3:27017", "user")
-	mgo = omongo.NewMongoDB("mongodb://root:root@172.31.39.207:13198,172.31.39.208:13198/?authSource=admin&replicaSet=nonomongo", "user")
-	log.Println("Start to ensure users index")
-	err := mgo.CreateIndexes("user", "user", []string{"u_user_1", "u_phone_1", "u_email_1"})
-	err = mgo.CreateIndexes("user", "feedback", []string{"u_bid_1"})
-	if err != nil {
-		panic(err)
-	}
-	log.Println("End ensure users index")
-
 	log.Println("Reg Router....")
-	h := ohttp.NewWithSession("127.0.0.1:6379", "")
-	o := ouser.New(mgo, h)
+	hh := ohttp.NewWithSession("127.0.0.1:6379", "")
+	o := ouser.New(hh)
+	h := hh.Group("/user")
 	//登陆注册
-	h.Add("/user/registerSimple", o.RegisterSimple) //简单注册
-	h.Add("/user/login", o.Login)                   //简单登录
-	h.AddAuth("/user/logout", o.Logout)             //登出
+	h.Add("/registerSimple", o.RegisterSimple) //简单注册
+	h.Add("/login", o.Login)                   //简单登录
+	h.AddAuth("/logout", o.Logout)             //登出
 	//用户设置类
-	h.AddAuth("/user/nicknameSet", o.NickNameSet) //设置显示名
+	h.AddAuth("/nicknameSet", o.NickNameSet) //设置显示名
 	//用户反馈类
-	h.AddAuth("/user/feedbackPull", o.FeedbackPull) //用户反馈
-	h.AddAuth("/user/feedbackGet", o.FeedbackList)  //用户反馈列表，读取
+	h.AddAuth("/feedbackPull", o.FeedbackPull) //用户反馈
+	h.AddAuth("/feedbackGet", o.FeedbackList)  //用户反馈列表，读取
 	//头像
-	h.AddAuth("/user/avatarSet", o.AvatarSet)
-	h.Add("/user/avatarGet", o.AvatarGet)
-	h.Run(os.Args[1])
+	h.AddAuth("/avatarSet", o.AvatarSet) //设置头像
+	h.Add("/avatarGet", o.AvatarGet)     //获取头像
+
+	h.AddAuth("/info", o.UserInfo) //获取用户信息
+
+	//短信类
+	h.Add("/smsPublic", o.SmsPublic) //发送短信，这将只能调用注册，登录，找回密码
+	h.Add("/smsLogin", o.SmsLogin)   //使用验证码登录 ， 如果不存在，这将新注册账号
+	log.Println("Reg Router Done!")
+
+	hh.Run(os.Args[1])
 }
