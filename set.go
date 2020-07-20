@@ -6,6 +6,8 @@ import (
 )
 
 //SetNickName 用户设置显示名称
+//Signed
+//p "nickname" 用户昵称
 func (t *Ouser) NickNameSet(p map[string]string) (interface{}, error) {
 	id := p["bsonid"]
 	nickname := p["nickname"]
@@ -17,6 +19,10 @@ func (t *Ouser) NickNameSet(p map[string]string) (interface{}, error) {
 		bson.M{"$set": bson.M{"nickname": nickname}})
 	return nil, err
 }
+
+//AvatarSet 设置用户头像
+//Signed POST
+//body里放入图片的二进制文件
 func (t *Ouser) AvatarSet(p map[string]string) (interface{}, error) {
 	bid := p["bsonid"]
 	bt := []byte(p["body"])
@@ -40,6 +46,9 @@ func (t *Ouser) AvatarSet(p map[string]string) (interface{}, error) {
 	)
 	return nil, err
 }
+
+//AvatarGet 获取用户头像
+//返回用户头像的二进制
 func (t *Ouser) AvatarGet(p map[string]string) (interface{}, error) {
 	id := p["id"]
 	if len(id) != 24 {
