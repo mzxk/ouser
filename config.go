@@ -25,7 +25,7 @@ type Config struct {
 		Key      string
 		Value    string
 		IDefault string
-		IDs      map[string]string
+		IDs      map[int]string
 	}
 }
 

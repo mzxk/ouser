@@ -11,6 +11,9 @@ const (
 	ErrLimit        = "out of limit"
 	ErrAvatar       = "wrong Avatar Size"
 	ErrClosedMethod = "method closed"
+	ErrCode         = "wrong contact or code"
+	ErrPayPwdNeed   = "must set pay password"
+	ErrContact      = "contact error"
 )
 
 func errs(s string) error {
