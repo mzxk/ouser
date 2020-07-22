@@ -76,8 +76,8 @@ func (t *Ouser) PaypwdSet(p map[string]string) (interface{}, error) {
 	return nil, err
 }
 
-//contactChange 用户换绑手机
-func (t *Ouser) contactChange(p map[string]string) (interface{}, error) {
+//ContactChange 用户换绑手机
+func (t *Ouser) ContactChange(p map[string]string) (interface{}, error) {
 	if err := t.checkPrivateCode(p, smsPhoneChange); err != nil {
 		return nil, err
 	}
