@@ -2,10 +2,12 @@ package ouser
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+//User 最主要的用户结构
 type User struct {
 	ID       primitive.ObjectID `bson:"_id"`
 	User     string             `bson:"user,omitempty"` //用户名
 	Pwd      string             `json:"-"`              //密码s
+	Paypwd   string             `json:"-"`              //支付密码
 	RegIP    string             `json:"-"`              //注册ip
 	Referrer string             `json:"-"`              //推荐人
 
@@ -19,12 +21,15 @@ type User struct {
 	RealName string //用户真名
 	Verify   int64  //用户认证等级
 
-	IsLocked bool     //用户是否锁定
-	Group    []string //用户组
+	Locked         bool  //用户是否锁定
+	LockedBalance  bool  //用户余额锁定
+	LockedWithdraw int64 //用户提现锁定，代表锁定到的unix时间，在此时间之前不允许提现
+
+	Group []string //用户组
 
 	RateLimit int64 `json:"-"` //用户接口全局限制
 
-	GoogleKey string `json:"-"` //用户的googlekey
+	GoogleKey string `json:"-"` //用户的google key
 }
 
 //Feedback 用户反馈的结构
