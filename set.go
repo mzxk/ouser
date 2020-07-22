@@ -1,6 +1,7 @@
 package ouser
 
 import (
+	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -58,4 +59,50 @@ func (t *Ouser) AvatarGet(p map[string]string) (interface{}, error) {
 	var result Avatar
 	err := c.FindOne(nil, bson.M{"_id": omongo.ID(id)}).Decode(&result)
 	return result, err
+}
+
+//PaypwdSet 设置支付密码
+func (t *Ouser) PaypwdSet(p map[string]string) (interface{}, error) {
+	if err := t.checkPrivateCode(p, smsPaypwdSet); err != nil {
+		return nil, err
+	}
+	pwd := p["paypwd"]
+	bid := omongo.ID(p["bsonid"])
+	if pwd == "" {
+		return nil, errs(ErrParamsWrong)
+	}
+	_, err := t.mgo.C("user").UpdateOne(nil,
+		bson.M{"_id": bid}, bson.M{"$set": bson.M{"paypwd": sha(pwd)}})
+	return nil, err
+}
+
+//contactChange 用户换绑手机
+func (t *Ouser) contactChange(p map[string]string) (interface{}, error) {
+	if err := t.checkPrivateCode(p, smsPhoneChange); err != nil {
+		return nil, err
+	}
+	field, err := t.checkPublicCode(p, smsPhoneBound)
+	if err != nil {
+		return nil, err
+	}
+	bid := omongo.ID(p["bsonid"])
+	_, err = t.mgo.C("user").UpdateOne(nil,
+		bson.M{"_id": bid}, bson.M{"$set": bson.M{field: p["contact"]}})
+	if omongo.IsDuplicate(err) {
+		return nil, errs(ErrUserExisted)
+	}
+	return nil, err
+}
+
+func (t *Ouser) checkPrivateCode(p map[string]string, checkType int) error {
+	code := p["code"]
+	bid := p["bsonid"]
+	if checkType > 6100 || checkType < 6000 || code == "" || bid == "" {
+		return errs(ErrParamsWrong)
+	}
+	key := joinSmsType(bid, checkType)
+	if !ohttp.CodeCheck(key, code) {
+		return errs(ErrCode)
+	}
+	return nil
 }
