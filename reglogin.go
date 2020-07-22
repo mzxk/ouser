@@ -2,8 +2,6 @@ package ouser
 
 import (
 	"fmt"
-	"strings"
-	"sync"
 
 	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
@@ -13,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var userCache sync.Map //用户信息的缓存
+var userCache = oval.NewExpire() //用户信息的缓存
 
 type Ouser struct {
 	mgo        *omongo.MongoDB
@@ -34,48 +32,91 @@ func (t *Ouser) Logout(p map[string]string) (interface{}, error) {
 	ohttp.DeleteSession(p["key"])
 	return nil, nil
 }
-func (t *Ouser) SmsLogin(p map[string]string) (interface{}, error) {
+
+//SmsResetPwd 这将重制用户登录密码，输入参数为 contact=联系方式 ， pwd=密码 ， contactType=验证方式
+func (t *Ouser) SmsResetPwd(p map[string]string) (interface{}, error) {
+	contactType, err := t.checkPublicCode(p, smsResetPwd)
+	if err != nil {
+		return nil, err
+	}
+	contact := p["contact"]
+	pwd := p["pwd"]
+	if pwd == "" {
+		return nil, errs(ErrParamsWrong)
+	}
+	_, err = t.mgo.C("user").UpdateOne(nil,
+		bson.M{contactType: contact},
+		bson.M{"$set": bson.M{
+			"pwd": sha(pwd),
+		}})
+	return nil, err
+}
+
+//这个函数将统一的验证公开sms输入的合理性，比如code是否存在，contact是否正常，同时验证code是否正确
+//默认的，这将联系方式设置为手机短信，如果前端有额外的参数contactType=email，才会设置成email
+func (t *Ouser) checkPublicCode(p map[string]string, checkType int) (string, error) {
 	//判断是否是正常的联系方式
 	contact := p["contact"]
-	code := p["code"]
+	code := p["codePublic"]
+	field := "phone"
+	if p["contactType"] == "email" {
+		field = "email"
+	}
 	if contact == "" || code == "" {
-		return nil, errs(ErrParamsWrong)
+		return field, errs(ErrParamsWrong)
 	}
-	isEmail := strings.Contains(contact, "@")
-	if isEmail {
-		return nil, errs(ErrParamsWrong)
+
+	if ohttp.CodeCheck(joinSmsType(contact, checkType), code) == false {
+		return field, errs(ErrCode)
 	}
-	if ohttp.CodeCheck(getType(contact, "login"), code) {
-		usr, err := t.login("phone", contact)
-		//代表不存在
-		if err == mongo.ErrNoDocuments {
-			//新建一个用户
-			usrNew := User{
-				ID:       omongo.ID(""),
-				User:     "",
-				RegIP:    p["ip"],
-				Referrer: p["referrer"],
-				Phone:    contact,
-			}
-			//插入用户
-			_, err = t.mgo.C("user").InsertOne(nil, usrNew)
-			//有极低的概率这里会有重复的用户名
-			if err != nil && omongo.IsDuplicate(err) {
-				fmt.Println(err)
-				return nil, errs(ErrUserExisted)
-			}
-			//这里代表插入成功，返回key和value
-			if err == nil {
-				return getLoginToken(usrNew.ID)
-			}
-			return nil, err
+	return field, nil
+}
+
+//SmsLogin 使用短信验证码登录，如果账户不存在，就新建一个
+//可选字段有 		referrer 	推荐人
+//可选字段			paypwd：	支付密码
+//					pwd:		登录密码
+func (t *Ouser) SmsLogin(p map[string]string) (interface{}, error) {
+	contactType, err := t.checkPublicCode(p, smsLogin)
+	if err != nil {
+		return nil, err
+	}
+	contact := p["contact"]
+	usr, err := t.userGetByField(contactType, contact)
+	//代表不存在
+	if err == mongo.ErrNoDocuments {
+		//新建一个用户
+		usrNew := User{
+			User:     contact,
+			ID:       omongo.ID(""),
+			RegIP:    p["ip"],
+			Referrer: p["referrer"],
+			Paypwd:   sha(p["paypwd"]),
+			Pwd:      sha(p["pwd"]),
 		}
-		if err != nil {
-			return nil, err
+		if contactType == "phone" {
+			usrNew.Phone = contact
+		} else {
+			usrNew.Email = contact
 		}
-		return getLoginToken(usr.ID)
+		//插入用户
+		_, err = t.mgo.C("user").InsertOne(nil, usrNew)
+		//有极低的概率这里会有重复的用户名
+		if err != nil && omongo.IsDuplicate(err) {
+			fmt.Println(err)
+			return nil, errs(ErrUserExisted)
+		}
+		//这里代表插入成功，返回key和value
+		if err == nil {
+			return getLoginToken(usrNew.ID)
+		}
+		return nil, err
 	}
-	return nil, errs(ErrUserLogin)
+	if err != nil {
+		return nil, err
+	}
+	return getLoginToken(usr.ID)
+
 }
 
 //Login 用户登陆
@@ -102,13 +143,13 @@ func (t *Ouser) Login(p map[string]string) (interface{}, error) {
 }
 
 func (t *Ouser) UserInfo(p map[string]string) (interface{}, error) {
-	return t.userGet(p)
+	return t.userCache(p)
 }
 
 //这个函数将输入用户id，来获取用户信息
 //如果缓存中存在，那么直接返回
 //如果缓存中不存在，那么重新从库中读取
-func (t *Ouser) userGet(p map[string]string) (*User, error) {
+func (t *Ouser) userCache(p map[string]string) (*User, error) {
 	id := p["bsonid"]
 	if id == "" {
 		return nil, errs(ErrParamsWrong)
@@ -123,7 +164,7 @@ func (t *Ouser) userGet(p map[string]string) (*User, error) {
 	var usr User
 	err := t.mgo.C("user").FindOne(nil, bson.M{"_id": omongo.ID(id)}).Decode(&usr)
 	if err == nil && usr.User != "" {
-		userCache.Store(usr.ID.Hex(), &usr)
+		userCache.Store(usr.ID.Hex(), &usr, 7200)
 		oval.UnLimited("getUserByID" + id)
 	}
 	return &usr, err
@@ -134,11 +175,11 @@ func (t *Ouser) userGet(p map[string]string) (*User, error) {
 //		"phone",	"16600001111"
 //		"email",	"abc@bcd.com"
 //同时如果获取成功，会存入userCache
-func (t *Ouser) login(field, value string) (*User, error) {
+func (t *Ouser) userGetByField(field, value string) (*User, error) {
 	var usr User
 	err := t.mgo.C("user").FindOne(nil, bson.M{field: value}).Decode(&usr)
 	if err == nil && usr.User != "" {
-		userCache.Store(usr.ID.Hex(), &usr)
+		userCache.Store(usr.ID.Hex(), &usr, 7200)
 	}
 	return &usr, err
 }
