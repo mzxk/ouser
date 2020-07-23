@@ -8,9 +8,9 @@ import (
 )
 
 //SmsPublic 发送短信验证码，公开接口，只能用于注册，登录，找回密码，修改手机号
-//参数
-//	type : login|reset 6001|6002
-//	contact : email或者手机号码
+//* params
+//* type          发送代码        6001｜6002｜6005 注册｜重置密码｜绑定手机
+//* contact       联系方式        手机号码｜信箱     后端自动识别
 func (t *Ouser) SmsPublic(p map[string]string) (interface{}, error) {
 	//判断是否是正常的联系方式，手机或者信箱
 	contact := p["contact"]
@@ -110,8 +110,9 @@ func (t *Ouser) contactPrivate(p map[string]string, isPhone bool) (interface{}, 
 const (
 	smsLogin = iota + 6001
 	smsResetPwd
-
-	smsPaypwdSet
-	smsPhoneChange
 	smsPhoneBound
+)
+const (
+	smsPaypwdSet = iota + 7001
+	smsPhoneChange
 )
