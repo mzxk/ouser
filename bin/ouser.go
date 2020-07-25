@@ -40,6 +40,11 @@ func main() {
 	h.Add("/smsPublic", o.SmsPublic)       //发送短信，这将只能调用注册，登录，找回密码
 	h.Add("/smsLogin", o.SmsLogin)         //使用验证码登录 ， 如果不存在，这将新注册账号
 	h.AddAuth("/smsPrivate", o.SmsPrivate) //发送用户本身的短信接口
+
+	//账务类
+	h.AddAuth("/withdraw", o.Withdraw)            //用户提现
+	h.AddAuth("/withdrawAccept", o.WithdrawCheck) //用户确认提款
+
 	log.Println("Reg Router Done!")
 
 	hh.Run(os.Args[1])
