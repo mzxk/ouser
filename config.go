@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	MongoURL string
-	RedisURL string
-	RedisPwd string
-
-	Register struct {
+	MongoURL   string
+	RedisURL   string
+	RedisPwd   string
+	BalanceURL string
+	Register   struct {
 		SimpleClosed bool
 		Limit        int64
 	}

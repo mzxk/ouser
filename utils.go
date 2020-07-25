@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -37,4 +38,11 @@ func s2i(s string) int64 {
 		i = 0
 	}
 	return i
+}
+func s2f(s string) float64 {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0.0
+	}
+	return f
 }

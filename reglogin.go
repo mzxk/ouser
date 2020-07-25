@@ -3,6 +3,7 @@ package ouser
 import (
 	"fmt"
 
+	"github.com/mzxk/obalance"
 	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
 	"github.com/mzxk/oval"
@@ -17,14 +18,21 @@ type Ouser struct {
 	mgo        *omongo.MongoDB
 	httpClient *ohttp.Server
 	sms        ohttp.Sms
+	balance    *obalance.Balance
 }
 
 func New(clt *ohttp.Server) *Ouser {
-	return &Ouser{
-		omongo.NewMongoDB(cfg.MongoURL, "user"),
-		clt,
-		ohttp.NewSms(cfg.Sms.Name, cfg.Sms.Key),
+	t := &Ouser{
+		mgo:        omongo.NewMongoDB(cfg.MongoURL, "user"),
+		httpClient: clt,
+		sms:        ohttp.NewSms(cfg.Sms.Name, cfg.Sms.Key),
 	}
+	if cfg.BalanceURL != "" {
+		t.balance = obalance.NewRemote(cfg.BalanceURL)
+	} else {
+		t.balance = obalance.NewLocal(cfg.RedisURL, cfg.RedisPwd)
+	}
+	return t
 }
 
 //Logout 用户登出

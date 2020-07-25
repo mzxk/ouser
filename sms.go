@@ -115,4 +115,5 @@ const (
 const (
 	smsPaypwdSet = iota + 7001
 	smsPhoneChange
+	smsWithdraw
 )
