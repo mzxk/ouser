@@ -75,6 +75,16 @@ func (t *Ouser) WithdrawCheck(p map[string]string) (interface{}, error) {
 	return nil, errs(ErrParamsWrong)
 }
 
+//WithdrawGet 获取提现记录
+func (t *Ouser) WithdrawGet(p map[string]string) (interface{}, error) {
+	var wr []Withdraw
+	c := t.mgo.C("withdraw")
+	err := c.FindAll(nil, bson.M{"bid": p["bsonid"]},
+		options.Find().SetSort(bson.M{"_id": -1}).SetLimit(100),
+	).All(&wr)
+	return wr, err
+}
+
 //Withdraw 这进行用户提现
 func (t *Ouser) Withdraw(p map[string]string) (interface{}, error) {
 	//判断验证码

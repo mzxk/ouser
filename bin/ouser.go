@@ -44,6 +44,7 @@ func main() {
 	//账务类
 	h.AddAuth("/withdraw", o.Withdraw)            //用户提现
 	h.AddAuth("/withdrawAccept", o.WithdrawCheck) //用户确认提款
+	h.AddAuth("/withdrawGet", o.WithdrawGet)
 
 	log.Println("Reg Router Done!")
 
