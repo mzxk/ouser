@@ -116,4 +116,5 @@ const (
 	smsPaypwdSet = iota + 7001
 	smsPhoneChange
 	smsWithdraw
+	smsGoogle2fa
 )

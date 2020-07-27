@@ -46,3 +46,34 @@ func s2f(s string) float64 {
 	}
 	return f
 }
+func (t *Ouser) checkPayPwd(p map[string]string) error {
+	pwd := p["paypwd"]
+	bid := p["bsonid"]
+	if pwd == "" || bid == "" {
+		return errs(ErrPayPwdNeed)
+	}
+	info, err := t.userCache(p)
+	if err != nil {
+		return err
+	}
+	if sha(pwd) == info.Paypwd {
+		return nil
+	}
+	return errs(ErrWrongPwd)
+}
+func (t *Ouser) checkGoogleCode(p map[string]string) bool {
+	goo := p["googleCode"]
+	bid := p["bsonid"]
+	info, err := t.userCache(p)
+	if err != nil {
+		return false
+	}
+	if info.GoogleKey == "" {
+		return true
+	}
+	if goo == "" || bid == "" {
+		return false
+	}
+
+	return new(Google2fa).Check2fa(goo, info.GoogleKey)
+}

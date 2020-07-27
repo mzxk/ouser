@@ -14,6 +14,8 @@ const (
 	ErrCode         = "wrong contact or code"
 	ErrPayPwdNeed   = "must set pay password"
 	ErrContact      = "contact error"
+	ErrWrongPwd     = "password wrong"
+	ErrGoogle2fa    = "google code wrong"
 )
 
 func errs(s string) error {

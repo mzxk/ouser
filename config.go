@@ -9,6 +9,7 @@ import (
 )
 
 type Config struct {
+	Name       string
 	MongoURL   string
 	RedisURL   string
 	RedisPwd   string

@@ -46,6 +46,10 @@ func main() {
 	h.AddAuth("/withdrawAccept", o.WithdrawCheck) //用户确认提款
 	h.AddAuth("/withdrawGet", o.WithdrawGet)
 
+	//google验证码
+	h.AddAuth("/g2faCreate", o.G2faCreate)
+	h.AddAuth("/g2faAccept", o.G2faAccept)
+
 	log.Println("Reg Router Done!")
 
 	hh.Run(os.Args[1])
