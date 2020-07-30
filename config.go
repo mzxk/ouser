@@ -32,7 +32,7 @@ type Config struct {
 
 var cfg *Config
 
-func init() {
+func Init() {
 	bt, err := ioutil.ReadFile("userConfig.json")
 	if err != nil {
 		cfg = &Config{
