@@ -18,6 +18,7 @@ func (t *Ouser) NickNameSet(p map[string]string) (interface{}, error) {
 	_, err := t.mgo.C("user").UpdateOne(nil,
 		bson.M{"_id": omongo.ID(id)},
 		bson.M{"$set": bson.M{"nickname": nickname}})
+	t.userCacheDelete(p)
 	return nil, err
 }
 
@@ -45,6 +46,7 @@ func (t *Ouser) AvatarSet(p map[string]string) (interface{}, error) {
 			},
 		},
 	)
+	t.userCacheDelete(p)
 	return nil, err
 }
 
@@ -73,6 +75,7 @@ func (t *Ouser) PaypwdSet(p map[string]string) (interface{}, error) {
 	}
 	_, err := t.mgo.C("user").UpdateOne(nil,
 		bson.M{"_id": bid}, bson.M{"$set": bson.M{"paypwd": sha(pwd)}})
+	t.userCacheDelete(p)
 	return nil, err
 }
 
@@ -91,13 +94,14 @@ func (t *Ouser) ContactChange(p map[string]string) (interface{}, error) {
 	if omongo.IsDuplicate(err) {
 		return nil, errs(ErrUserExisted)
 	}
+	t.userCacheDelete(p)
 	return nil, err
 }
 
 func (t *Ouser) checkPrivateCode(p map[string]string, checkType int) error {
 	code := p["code"]
 	bid := p["bsonid"]
-	if checkType > 6100 || checkType < 6000 || code == "" || bid == "" {
+	if checkType > 7100 || checkType < 7000 || code == "" || bid == "" {
 		return errs(ErrParamsWrong)
 	}
 	key := joinSmsType(bid, checkType)
