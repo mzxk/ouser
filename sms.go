@@ -27,7 +27,7 @@ func (t *Ouser) SmsPublic(p map[string]string) (interface{}, error) {
 	}
 	//判断是否是允许的type
 	tp := int(s2i(p["type"]))
-	if tp != 6001 && tp != 6002 && tp != 6005 {
+	if tp > 6050 || tp < 6001 {
 		return nil, errs(ErrParamsWrong)
 	}
 
@@ -64,7 +64,7 @@ func (t *Ouser) SmsPrivate(p map[string]string) (interface{}, error) {
 func (t *Ouser) contactPrivate(p map[string]string, isPhone bool) (interface{}, error) {
 	//确认是不是正常的id
 	tp := int(s2i(p["type"]))
-	if tp > 6100 || tp < 6000 {
+	if tp > 7100 || tp < 7000 {
 		return nil, errs(ErrParamsWrong)
 	}
 	//获取用户缓存
