@@ -50,7 +50,7 @@ func (t *Ouser) checkPayPwd(p map[string]string) error {
 	pwd := p["paypwd"]
 	bid := p["bsonid"]
 	if pwd == "" || bid == "" {
-		return errs(ErrPayPwdNeed)
+		return errs(ErrParamsWrong)
 	}
 	info, err := t.userCache(p)
 	if err != nil {

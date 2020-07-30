@@ -22,7 +22,7 @@ func (t *Ouser) G2faCreate(p map[string]string) (interface{}, error) {
 		return nil, err
 	}
 	k, v := new(Google2fa).CreateKey(info.User, cfg.Name)
-	ohttp.RedisSet(info.User+"google2fa", v, 15*60)
+	ohttp.RedisSet(info.ID.Hex()+"google2fa", v, 15*60)
 	return []string{k, v}, nil
 }
 
@@ -32,7 +32,7 @@ func (t *Ouser) G2faAccept(p map[string]string) (interface{}, error) {
 		return nil, err
 	}
 	god := ohttp.RedisGet(p["bsonid"] + "google2fa")
-	if new(Google2fa).Check2fa(p["googleCode"], god) {
+	if new(Google2fa).Check2fa(p["googleCode"], god) == false {
 		return nil, errs(ErrGoogle2fa)
 	}
 	if err := t.checkPrivateCode(p, smsGoogle2fa); err != nil {
@@ -40,13 +40,16 @@ func (t *Ouser) G2faAccept(p map[string]string) (interface{}, error) {
 	}
 	c := t.mgo.C("user")
 	_, err := c.UpdateOne(nil,
-		bson.M{"_id": omongo.ID(p["bsonid"])},
+		bson.D{{"_id", omongo.ID(p["bsonid"])}, {"googlekey", ""}},
 		bson.M{"$set": bson.M{"googlekey": god}})
 	return nil, err
 }
 
 //Check2fa .
 func (f *Google2fa) Check2fa(intuser, key string) bool {
+	if intuser == "" || key == "" {
+		return false
+	}
 	result, err := f.MakeGoogleAuthenticatorForNow(key)
 	if err == nil && result == intuser {
 		return true
