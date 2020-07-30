@@ -2,6 +2,7 @@ package ouser
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/mzxk/obalance"
 	"github.com/mzxk/ohttp"
@@ -22,6 +23,8 @@ type Ouser struct {
 }
 
 func New(clt *ohttp.Server) *Ouser {
+	Init()
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
 	t := &Ouser{
 		mgo:        omongo.NewMongoDB(cfg.MongoURL, "user"),
 		httpClient: clt,
@@ -176,6 +179,11 @@ func (t *Ouser) userCache(p map[string]string) (*User, error) {
 		oval.UnLimited("getUserByID" + id)
 	}
 	return &usr, err
+}
+
+//在有更新后清楚一下用户缓存
+func (t *Ouser) userCacheDelete(p map[string]string) {
+	userCache.Delete(p["bsonid"])
 }
 
 //这个函数调用可能存在的字段和名字来获取用户信息
