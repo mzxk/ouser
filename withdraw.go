@@ -37,7 +37,7 @@ func (t *Ouser) WithdrawCheck(p map[string]string) (interface{}, error) {
 	if id == "" {
 		return nil, errors.New(ErrParamsWrong)
 	}
-	idd := omongo.ID("id")
+	idd := omongo.ID(id)
 	//确认用户提现，需要验证id，用户id和状态，设置用户确认为true以及状态为用户确认
 	if action == "accept" {
 		c := t.mgo.C("withdraw")
@@ -47,13 +47,11 @@ func (t *Ouser) WithdrawCheck(p map[string]string) (interface{}, error) {
 				{"bid", p["bsonid"]},
 				{"state", ""},
 			},
-			bson.M{"$set": bson.M{"verifyuser": true}, "state": "userVerify"},
+			bson.M{"$set": bson.M{"verifyuser": true, "state": "userVerify"}},
 		)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 		//当用户取消提现时，需要确认id，用户id，转账记录为空，还没有进行用户确认，然后设置txid和状态为取消
-	} else if action == "canceled" {
+	} else if action == "cancel" {
 		var wr Withdraw
 		c := t.mgo.C("withdraw")
 		err := c.FindOneAndUpdate(nil,
