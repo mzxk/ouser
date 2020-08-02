@@ -2,9 +2,7 @@ package ouser
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/mzxk/obalance"
 	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
 	"github.com/mzxk/oval"
@@ -12,31 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-var userCache = oval.NewExpire() //用户信息的缓存
-
-type Ouser struct {
-	mgo        *omongo.MongoDB
-	httpClient *ohttp.Server
-	sms        ohttp.Sms
-	balance    *obalance.Balance
-}
-
-func New(clt *ohttp.Server) *Ouser {
-	Init()
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
-	t := &Ouser{
-		mgo:        omongo.NewMongoDB(cfg.MongoURL, "user"),
-		httpClient: clt,
-		sms:        ohttp.NewSms(cfg.Sms.Name, cfg.Sms.Key),
-	}
-	if cfg.BalanceURL != "" {
-		t.balance = obalance.NewRemote(cfg.BalanceURL)
-	} else {
-		t.balance = obalance.NewLocal(cfg.RedisURL, cfg.RedisPwd)
-	}
-	return t
-}
 
 //Logout 用户登出
 func (t *Ouser) Logout(p map[string]string) (interface{}, error) {
