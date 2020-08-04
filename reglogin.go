@@ -73,6 +73,7 @@ func (t *Ouser) SmsLogin(p map[string]string) (interface{}, error) {
 		usrNew := User{
 			User:     contact,
 			ID:       omongo.ID(""),
+			Uid:      <-idCreate,
 			RegIP:    p["ip"],
 			Referrer: p["referrer"],
 			Paypwd:   sha(p["paypwd"]),
@@ -190,6 +191,7 @@ func (t *Ouser) RegisterSimple(p map[string]string) (interface{}, error) {
 	c := t.mgo.C("user")
 	usr := User{
 		ID:       omongo.ID(""),
+		Uid:      <-idCreate,
 		User:     user,
 		Pwd:      sha(pwd),
 		RegIP:    p["ip"],

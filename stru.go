@@ -4,7 +4,8 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 
 //User 最主要的用户结构
 type User struct {
-	ID       primitive.ObjectID `bson:"_id"`
+	ID       primitive.ObjectID `bson:"_id" json:"-"`
+	Uid      string             `json:"ID"`
 	User     string             `bson:"user,omitempty"` //用户名
 	Pwd      string             `json:"-"`              //密码s
 	Paypwd   string             `json:"-"`              //支付密码

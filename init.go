@@ -2,8 +2,10 @@ package ouser
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"time"
 
 	"github.com/mzxk/obalance"
 	"github.com/mzxk/ohttp"
@@ -35,7 +37,18 @@ func New(clt *ohttp.Server) *Ouser {
 	}
 	return t
 }
+
+var idCreate = make(chan string, 5000)
+
 func Init() {
+	go func() {
+		var begin int64 = 159651286600
+		for {
+			unix := time.Now().UnixNano()/10000 - begin
+			idCreate <- fmt.Sprintf("%x", unix)
+			time.Sleep(11 * time.Millisecond)
+		}
+	}()
 	bt, err := ioutil.ReadFile("userConfig.json")
 	if err != nil {
 		cfg = &Config{
