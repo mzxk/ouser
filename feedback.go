@@ -15,8 +15,10 @@ func (t *Ouser) FeedbackPull(p map[string]string) (interface{}, error) {
 	}
 	c := t.mgo.C("feedback")
 	_, err := c.Upsert(nil, bson.M{"bid": p["bsonid"]}, bson.M{"$push": bson.M{"text": FeedbackText{
-		Time: time.Now().Format("2006-01-02 15:04:05"),
-		Text: txt,
+		Time:  time.Now().Format("2006-01-02 15:04:05"),
+		Text:  txt,
+		Type:  p["type"],
+		Title: p["title"],
 	}}})
 	return nil, err
 }
