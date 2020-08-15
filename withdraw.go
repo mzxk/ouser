@@ -1,9 +1,11 @@
 package ouser
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
+	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,7 +25,6 @@ type Withdraw struct {
 	Amount      float64 //数量
 	Currency    string  //币种
 	State       string  //状态名称
-	VerifyUser  bool    //用户是否确认
 	VerifyRisk  bool    //风控是否通过
 	VerifyAdmin bool    //人工是否通过
 	FeeAmount   float64 //系统收取的手续费
@@ -37,40 +38,29 @@ func (t *Ouser) WithdrawCheck(p map[string]string) (interface{}, error) {
 	if id == "" {
 		return nil, errors.New(ErrParamsWrong)
 	}
-	idd := omongo.ID(id)
+	var wr Withdraw
+	wrString := ohttp.RedisGet(id)
+	err := json.Unmarshal([]byte(wrString), &wr)
+	if err != nil {
+		return nil, err
+	}
 	//确认用户提现，需要验证id，用户id和状态，设置用户确认为true以及状态为用户确认
 	if action == "accept" {
-		c := t.mgo.C("withdraw")
-		_, err := c.UpdateOne(nil,
-			bson.D{
-				{"_id", idd},
-				{"bid", p["bsonid"]},
-				{"state", ""},
-			},
-			bson.M{"$set": bson.M{"verifyuser": true, "state": "userVerify"}},
-		)
-		return nil, err
-		//当用户取消提现时，需要确认id，用户id，转账记录为空，还没有进行用户确认，然后设置txid和状态为取消
-	} else if action == "cancel" {
-		var wr Withdraw
-		c := t.mgo.C("withdraw")
-		err := c.FindOneAndUpdate(nil,
-			bson.D{
-				{"_id", idd},
-				{"bid", p["bsonid"]},
-				{"txid", ""},
-				{"verifyuser", false},
-			},
-			bson.M{"$set": bson.M{"txid": "canceled", "state": "canceled"}},
-			options.FindOneAndUpdate().SetReturnDocument(options.After),
-		).Decode(&wr)
+		//扣款
+		_, err = t.balance.New("withdraw", wr.Currency, wr.ID.Hex()).Lock(wr.Bid, wr.Amount).Run()
 		if err != nil {
 			return nil, err
 		}
-		_, err = t.balance.New("withdraw", wr.Currency, wr.ID.Hex()).UnLock(wr.Bid, wr.Amount).Run()
+		//写入提现记录
+		err = wr.Save(t.mgo)
+		//写入出现问题，回退余额
+		if err != nil {
+			_, _ = t.balance.New("withdraw", wr.Currency, wr.ID.Hex()).UnLock(wr.Bid, wr.Amount).Run()
+			return nil, err
+		}
 		return nil, err
 	}
-	return nil, errs(ErrParamsWrong)
+	return nil, nil
 }
 
 //WithdrawGet 获取提现记录
@@ -98,18 +88,9 @@ func (t *Ouser) Withdraw(p map[string]string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	//扣款
-	_, err = t.balance.New("withdraw", wr.Currency, wr.ID.Hex()).Lock(wr.Bid, wr.Amount).Run()
-	if err != nil {
-		return nil, err
-	}
-	//写入提现记录
-	err = wr.Save(t.mgo)
-	//写入出现问题，回退余额
-	if err != nil {
-		_, _ = t.balance.New("withdraw", wr.Currency, wr.ID.Hex()).UnLock(wr.Bid, wr.Amount).Run()
-		return nil, err
-	}
+	js, _ := json.Marshal(wr)
+	ohttp.RedisSet(wr.ID.Hex(), string(js), 750)
+
 	//返回提现后余额
 	return wr, nil
 }
