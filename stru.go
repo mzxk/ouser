@@ -43,7 +43,9 @@ type Feedback struct {
 type FeedbackText struct {
 	Time  string
 	Admin bool
+	Title string
 	Text  string
+	Type  string
 }
 
 //Avatar 用户头像
