@@ -2,6 +2,7 @@ package ouser
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
@@ -75,7 +76,7 @@ func (t *Ouser) SmsLogin(p map[string]string) (interface{}, error) {
 			ID:       omongo.ID(""),
 			Uid:      <-idCreate,
 			RegIP:    p["ip"],
-			Referrer: p["referrer"],
+			Referrer: t.getReferrerID(p["referrer"]),
 			Paypwd:   sha(p["paypwd"]),
 			Pwd:      sha(p["pwd"]),
 		}
@@ -174,6 +175,20 @@ func (t *Ouser) userGetByField(field, value string) (*User, error) {
 	return &usr, err
 }
 
+//这个函数用户获得推荐人实际的ID
+func (t *Ouser) getReferrerID(referrer string) string {
+	//当推荐人为空，返回空
+	if referrer == "" {
+		return ""
+	}
+	usr, e := t.userGetByField("uid", referrer)
+	if e != nil || usr == nil {
+		log.Println("GetReferrerError:", referrer, e)
+		return ""
+	}
+	return usr.ID.Hex()
+}
+
 //RegisterSimple 用户注册
 func (t *Ouser) RegisterSimple(p map[string]string) (interface{}, error) {
 	if cfg.Register.SimpleClosed {
@@ -195,7 +210,7 @@ func (t *Ouser) RegisterSimple(p map[string]string) (interface{}, error) {
 		User:     user,
 		Pwd:      sha(pwd),
 		RegIP:    p["ip"],
-		Referrer: p["referrer"],
+		Referrer: t.getReferrerID(p["referrer"]),
 	}
 	rst, err := c.Upsert(nil, bson.M{"user": usr.User}, bson.M{"$setOnInsert": usr})
 	if err != nil {
