@@ -11,7 +11,7 @@ import (
 
 func main() {
 	log.Println("Reg Router....")
-	hh := ohttp.NewWithSession("127.0.0.1:6379", "")
+	hh := ohttp.NewWithSession(os.Getenv("redisURL"), os.Getenv("redisPWD"))
 	o := ouser.New(hh)
 	h := hh.Group("/user")
 
@@ -45,12 +45,20 @@ func main() {
 	h.AddAuth("/withdraw", o.Withdraw)            //用户提现
 	h.AddAuth("/withdrawAccept", o.WithdrawCheck) //用户确认提款
 	h.AddAuth("/withdrawGet", o.WithdrawGet)
+	h.AddAuth("/addressGet", o.AddressGet)
 	h.AddAuth("/balanceGet", o.BalanceGet)
 
 	//google验证码
 	h.AddAuth("/g2faCreate", o.G2faCreate)
 	h.AddAuth("/g2faAccept", o.G2faAccept)
 
+	//购物类
+	h.Add("/shopItemsGet", o.ShopItemsGet) //获取列表
+	h.Add("/shopDiscount", o.ShopDiscount) //查看购买折扣
+	h.AddAuth("/shopBuy", o.ShopBuy)       //购买
+	h.AddAuth("/shopList", o.ShopList)     //查看自己的购买列表
+
+	h.AddAuth("/rebateGet", o.RebateGet)
 	log.Println("Reg Router Done!")
 
 	hh.Run(os.Args[1])
