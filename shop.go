@@ -1,6 +1,9 @@
 package ouser
 
 import (
+	"log"
+	"time"
+
 	"github.com/mzxk/omongo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -68,14 +71,20 @@ func (t *Ouser) ShopBuy(p map[string]string) (interface{}, error) {
 	}
 	c := t.mgo.C("shoplist")
 	_, err = c.InsertOne(nil, sl)
+	t.shopRebate(p, sl, shopItem.Rebate)
 	return nil, err
 }
+
+//ShopList 获取当前用户的购买列表
 func (t *Ouser) ShopList(p map[string]string) (interface{}, error) {
 	c := t.mgo.C("shoplist")
 	var result []ShopList
 	err := c.FindAll(nil, bson.M{"uid": p["bsonid"]}).All(&result)
 	return result, err
 }
+
+//ShopDiscount 获取折扣价格，需要输入的有商品id和折扣码
+//id-discountCode
 func (t *Ouser) ShopDiscount(p map[string]string) (interface{}, error) {
 	id := p["id"]
 	code := p["discountCode"]
@@ -108,4 +117,82 @@ func (t *Ouser) ShopDiscount(p map[string]string) (interface{}, error) {
 		}
 	}
 	return result, nil
+}
+
+type Rebate struct {
+	Uid      string
+	Amount   map[string]float64
+	Invitees int64
+	List     []RebateList
+}
+
+func (t *Ouser) shopRebate(p map[string]string, sl ShopList, re float64) {
+	//返现比例为0，直接返回
+	if re < 0.0001 {
+		return
+	}
+	re = sl.TotalPrice * re
+	usr, err := t.userCache(p)
+	if err != nil || usr == nil {
+		log.Println("???", p["bsonid"], err)
+	}
+	if usr.Referrer == "" {
+		return
+	}
+	lst := RebateList{
+		Time:     time.Now().Format("2006-01-02 15:04:05"),
+		ID:       sl.ID.Hex(),
+		Name:     "购物返利",
+		Uid:      usr.ID.Hex(),
+		Currency: sl.Currency,
+		Amount:   re,
+	}
+RE:
+	m := t.mgo.C("rebate")
+	_, err = m.Upsert(nil,
+		bson.M{"uid": usr.Referrer},
+		bson.M{
+			"$inc":  bson.M{"amount." + sl.Currency: re},
+			"$push": bson.M{"list": lst},
+		})
+	if err != nil {
+		log.Println(err)
+		time.Sleep(1 * time.Second)
+		goto RE
+	}
+	ba := t.balance.New("rebate", lst.Currency, sl.ID.Hex())
+	_, err = ba.IncrAvail(usr.Referrer, re).Run()
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+type RebateList struct {
+	Time     string  //时间
+	ID       string  //增加这笔记录的事件ID
+	Name     string  //显示名称
+	Uid      string  //这笔来源用户ID
+	Currency string  //币种
+	Amount   float64 //数量
+}
+
+func (t *Ouser) RebateGet(p map[string]string) (interface{}, error) {
+	m := t.mgo.C("rebate")
+	var result Rebate
+	err := m.FindOne(nil, bson.M{"uid": p["bsonid"]}).Decode(&result)
+	return result, err
+	//r := &Rebate{
+	//	Uid:      "test",
+	//	Amount:   map[string]float64{"T": 100.0},
+	//	Invitees: 10,
+	//	List: []RebateList{{
+	//		Time:     "2020-01-01 12:33:45",
+	//		ID:       "idididididididid",
+	//		Name:     "用户购买矿机",
+	//		Uid:      "uiduiduid",
+	//		Currency: "T",
+	//		Amount:   100.0,
+	//	}},
+	//}
+	//return r, nil
 }
