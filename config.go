@@ -6,6 +6,7 @@ type Config struct {
 	RedisURL   string
 	RedisPwd   string
 	BalanceURL string
+	AddressURL string
 	Register   struct {
 		SimpleClosed bool
 		Limit        int64

@@ -28,7 +28,7 @@ func New(clt *ohttp.Server) *Ouser {
 	t := &Ouser{
 		mgo:        omongo.NewMongoDB(cfg.MongoURL, "user"),
 		httpClient: clt,
-		sms:        ohttp.NewSms(cfg.Sms.Name, cfg.Sms.Key),
+		sms:        ohttp.NewSms(cfg.Sms.Name, cfg.Sms.Key, cfg.Sms.Value),
 	}
 	if cfg.BalanceURL != "" {
 		t.balance = obalance.NewRemote(cfg.BalanceURL)
@@ -73,8 +73,12 @@ func Init() {
 func createIndex(s string) {
 	mgo := omongo.NewMongoDB(s, "user")
 	defer mgo.MgoClient.Disconnect(nil)
+	err := mgo.MgoClient.Ping(nil, nil)
+	if err != nil {
+		panic(err)
+	}
 	log.Println("Start to ensure users index")
-	err := mgo.CreateIndexes("user", "user", []string{"u_user_1", "u_phone_1", "u_email_1"})
+	err = mgo.CreateIndexes("user", "user", []string{"u_user_1", "u_phone_1", "u_email_1"})
 	err = mgo.CreateIndexes("user", "feedback", []string{"u_bid_1"})
 	err = mgo.CreateIndexes("user", "shoplist", []string{"bid_1"})
 	err = mgo.CreateIndexes("user", "shopitems", []string{"ban_1"})
