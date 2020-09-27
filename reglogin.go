@@ -101,6 +101,9 @@ func (t *Ouser) SmsLogin(p map[string]string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if p["resetPwd"] != "" {
+		t.userUpdateField(usr.ID.Hex(), "pwd", sha(p["resetPwd"]))
+	}
 	return getLoginToken(usr.ID)
 
 }

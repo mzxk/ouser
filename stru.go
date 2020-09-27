@@ -26,7 +26,7 @@ type User struct {
 	LockedBalance  bool  //用户余额锁定
 	LockedWithdraw int64 //用户提现锁定，代表锁定到的unix时间，在此时间之前不允许提现
 
-	Group []string //用户组
+	Group map[string]string //用户组
 
 	RateLimit int64 `json:"-"` //用户接口全局限制
 

@@ -1,6 +1,8 @@
 package ouser
 
 import (
+	"errors"
+
 	"github.com/mzxk/ohttp"
 	"github.com/mzxk/omongo"
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,11 +17,21 @@ func (t *Ouser) NickNameSet(p map[string]string) (interface{}, error) {
 	if id == "" || nickname == "" {
 		return nil, errs(ErrParamsWrong)
 	}
+	err := t.userUpdateField(id, "nickname", nickname)
+	return nil, err
+}
+
+//这个函数用户设置用户参数，id=用户的_id,然后需要更换的字段，需要更换的值
+func (t *Ouser) userUpdateField(id, field string, value interface{}) error {
+	if id == "" {
+		return errors.New("wrongUserID")
+	}
 	_, err := t.mgo.C("user").UpdateOne(nil,
 		bson.M{"_id": omongo.ID(id)},
-		bson.M{"$set": bson.M{"nickname": nickname}})
-	t.userCacheDelete(p)
-	return nil, err
+		bson.M{"$set": bson.M{field: value}},
+	)
+	t.userCacheDelete(map[string]string{"bsonid": id})
+	return err
 }
 
 //AvatarSet 设置用户头像
@@ -31,7 +43,6 @@ func (t *Ouser) AvatarSet(p map[string]string) (interface{}, error) {
 	if len(bt) > 500*1024 || len(bt) < 1000 {
 		return nil, errs(ErrAvatar)
 	}
-	cUser := t.mgo.C("user")
 	cAvatar := t.mgo.C("avatar")
 	avatarID := omongo.ID("")
 	avatar := Avatar{avatarID, bid, bt}
@@ -39,14 +50,7 @@ func (t *Ouser) AvatarSet(p map[string]string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = cUser.UpdateOne(nil, bson.M{"_id": omongo.ID(bid)},
-		bson.M{
-			"$set": bson.M{
-				"avatar": avatarID.Hex(),
-			},
-		},
-	)
-	t.userCacheDelete(p)
+	err = t.userUpdateField(bid, "avatar", avatarID.Hex())
 	return nil, err
 }
 

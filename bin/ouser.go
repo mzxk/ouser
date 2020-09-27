@@ -38,7 +38,7 @@ func main() {
 
 	//短信类
 	h.Add("/smsPublic", o.SmsPublic)       //发送短信，这将只能调用注册，登录，找回密码
-	h.Add("/smsLogin", o.SmsLogin)         //使用验证码 登录 ， 如果不存在，这将新注册账号
+	h.Add("/smsLogin", o.SmsLogin)         //使用验证码 登录 ， 如果不存在，这将新注册账号 , 同时重置密码也是这个接口。
 	h.AddAuth("/smsPrivate", o.SmsPrivate) //发送用户本身的短信接口
 
 	//账务类
@@ -59,6 +59,9 @@ func main() {
 	h.AddAuth("/shopList", o.ShopList)     //查看自己的购买列表
 
 	h.AddAuth("/rebateGet", o.RebateGet)
+
+	//用户类
+	h.AddAuth("/admin/get", o.AdminGet)
 	log.Println("Reg Router Done!")
 
 	hh.Run(os.Args[1])
