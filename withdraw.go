@@ -79,6 +79,10 @@ func (t *Ouser) Withdraw(p map[string]string) (interface{}, error) {
 	if err := t.checkPrivateCode(p, smsWithdraw); err != nil {
 		return nil, err
 	}
+	//判断支付密码
+	if err := t.checkPayPwd(p); err != nil {
+		return nil, err
+	}
 	//构建提款操作
 	wr, err := t.withdrawCreate(p["bsonid"], p["currency"])
 	if err != nil {
