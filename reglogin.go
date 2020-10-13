@@ -40,6 +40,9 @@ func (t *Ouser) SmsResetPwd(p map[string]string) (interface{}, error) {
 //这个函数将统一的验证公开sms输入的合理性，比如code是否存在，contact是否正常，同时验证code是否正确
 //默认的，这将联系方式设置为手机短信，如果前端有额外的参数contactType=email，才会设置成email
 func (t *Ouser) checkPublicCode(p map[string]string, checkType int) (string, error) {
+	if cfg.OnlyGoogle {
+		return "nil", errs("SmsLoginClosed")
+	}
 	//判断是否是正常的联系方式
 	contact := p["contact"]
 	code := p["codePublic"]
@@ -102,7 +105,7 @@ func (t *Ouser) SmsLogin(p map[string]string) (interface{}, error) {
 		return nil, err
 	}
 	if p["resetPwd"] != "" {
-		t.userUpdateField(usr.ID.Hex(), "pwd", sha(p["resetPwd"]))
+		_ = t.userUpdateField(usr.ID.Hex(), "pwd", sha(p["resetPwd"]))
 	}
 	return getLoginToken(usr.ID)
 
@@ -213,6 +216,7 @@ func (t *Ouser) RegisterSimple(p map[string]string) (interface{}, error) {
 		User:     user,
 		Pwd:      sha(pwd),
 		RegIP:    p["ip"],
+		Paypwd:   sha(p["payPwd"]),
 		Referrer: t.getReferrerID(p["referrer"]),
 	}
 	rst, err := c.Upsert(nil, bson.M{"user": usr.User}, bson.M{"$setOnInsert": usr})
