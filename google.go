@@ -6,6 +6,7 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/mzxk/ohttp"
@@ -21,12 +22,16 @@ func (t *Ouser) G2faCreate(p map[string]string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if info.GoogleKey != "" {
+		return nil, errs(ErrGoogleExists)
+	}
 	k, v := new(Google2fa).CreateKey(info.User, cfg.Name)
 	ohttp.RedisSet(info.ID.Hex()+"google2fa", v, 15*60)
 	return []string{k, v}, nil
 }
 
 //G2faAccept 设置用户的googlekey，这将验证支付密码，google密码和手机验证码
+//googleCode code payPwd
 func (t *Ouser) G2faAccept(p map[string]string) (interface{}, error) {
 	if err := t.checkPayPwd(p); err != nil {
 		return nil, err
@@ -42,7 +47,26 @@ func (t *Ouser) G2faAccept(p map[string]string) (interface{}, error) {
 	_, err := c.UpdateOne(nil,
 		bson.D{{"_id", omongo.ID(p["bsonid"])}, {"googlekey", ""}},
 		bson.M{"$set": bson.M{"googlekey": god}})
+	if err == nil {
+		t.userCacheDelete(p)
+	}
 	return nil, err
+}
+
+//要求p里有googleCode和bsonid
+func (t *Ouser) g2faCheck(p map[string]string) bool {
+	if cfg.OnlyGoogle {
+		p["googleCode"] = p["code"]
+	}
+	usr, err := t.userCache(p)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	if usr.GoogleKey == "" {
+		return true
+	}
+	return new(Google2fa).Check2fa(p["googleCode"], usr.GoogleKey)
 }
 
 //Check2fa .

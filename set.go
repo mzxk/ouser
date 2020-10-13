@@ -8,6 +8,25 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+//PwdChange 更换用户密码
+func (t *Ouser) PwdChange(p map[string]string) (interface{}, error) {
+	pwd := p["pwd"]
+	newPwd := p["newPwd"]
+	if pwd == "" || newPwd == "" {
+		return nil, errs(ErrParamsWrong)
+	}
+	usr, _ := t.userCache(p)
+	if sha(pwd) != usr.Pwd {
+		return nil, errs(ErrUserLogin)
+	}
+	if cfg.OnlyGoogle {
+		if err := t.checkPayPwd(p); err != nil {
+			return nil, err
+		}
+	}
+	return nil, t.userUpdateField(p["bsonid"], "pwd", sha(newPwd))
+}
+
 //SetNickName 用户设置显示名称
 //Signed
 //p "nickname" 用户昵称
@@ -72,15 +91,11 @@ func (t *Ouser) PaypwdSet(p map[string]string) (interface{}, error) {
 	if err := t.checkPrivateCode(p, smsPaypwdSet); err != nil {
 		return nil, err
 	}
-	pwd := p["paypwd"]
-	bid := omongo.ID(p["bsonid"])
+	pwd := p["payPwd"]
 	if pwd == "" {
 		return nil, errs(ErrParamsWrong)
 	}
-	_, err := t.mgo.C("user").UpdateOne(nil,
-		bson.M{"_id": bid}, bson.M{"$set": bson.M{"paypwd": sha(pwd)}})
-	t.userCacheDelete(p)
-	return nil, err
+	return nil, t.userUpdateField(p["bsonid"], "paypwd", sha(pwd))
 }
 
 //ContactChange 用户换绑手机
@@ -103,6 +118,12 @@ func (t *Ouser) ContactChange(p map[string]string) (interface{}, error) {
 }
 
 func (t *Ouser) checkPrivateCode(p map[string]string, checkType int) error {
+	if cfg.OnlyGoogle {
+		if t.g2faCheck(p) {
+			return nil
+		}
+		return errs("wrongCode")
+	}
 	code := p["code"]
 	bid := p["bsonid"]
 	if checkType > 7100 || checkType < 7000 || code == "" || bid == "" {

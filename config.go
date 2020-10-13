@@ -7,6 +7,7 @@ type Config struct {
 	RedisPwd   string
 	BalanceURL string
 	AddressURL string
+	OnlyGoogle bool
 	Register   struct {
 		SimpleClosed bool
 		Limit        int64

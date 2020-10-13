@@ -24,6 +24,7 @@ func main() {
 	h.AddAuth("/nicknameSet", o.NickNameSet)     //设置显示名
 	h.AddAuth("/paypwdSet", o.PaypwdSet)         //设置支付密码
 	h.AddAuth("/contactChange", o.ContactChange) //用户换绑手机
+	h.AddAuth("/pwdChange", o.PwdChange)
 
 	//用户反馈类
 	h.AddAuth("/feedbackPull", o.FeedbackPull) //用户反馈
@@ -62,6 +63,8 @@ func main() {
 
 	//用户类
 	h.AddAuth("/admin/get", o.AdminGet)
+	h.AddAuth("/admin/info", o.AdminUserInfo)
+	h.AddAuth("/admin/checkGP", o.AdminCheckGP)
 	log.Println("Reg Router Done!")
 
 	hh.Run(os.Args[1])
